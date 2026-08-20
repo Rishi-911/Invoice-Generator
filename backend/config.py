@@ -2,7 +2,6 @@ import threading
 import os
 from pathlib import Path
 
-# Thread-local storage for request-specific paths
 _local = threading.local()
 
 class DynamicPathProxy:
@@ -14,7 +13,6 @@ class DynamicPathProxy:
         self._get_path_fn = get_path_fn
 
     def __truediv__(self, other):
-        # Allow path concatenation like path / 'subdir'
         return self._get_path_fn() / other
 
     def __str__(self):
@@ -24,11 +22,9 @@ class DynamicPathProxy:
         return repr(self._get_path_fn())
 
     def __fspath__(self):
-        # Support os.fspath() and open() functions expecting os.PathLike
         return os.fspath(self._get_path_fn())
 
     def __getattr__(self, name):
-        # Delegate all other pathlib.Path methods (e.g. resolve, mkdir, exists)
         return getattr(self._get_path_fn(), name)
 
 BASE_DIR = Path(__file__).parent
@@ -36,11 +32,9 @@ DATA_FOLDER = BASE_DIR / "data"
 TEMPLATES_FOLDER = BASE_DIR / "template"
 OUTPUT_FOLDER = BASE_DIR / "output"
 
-# Default directories for standalone run or fallback
 DOCX_OUTPUT_FOLDER_DEFAULT = OUTPUT_FOLDER / "docx"
 PDF_OUTPUT_FOLDER_DEFAULT = OUTPUT_FOLDER / "pdf"
 
-# Dynamic proxies pointing to thread-local paths if configured, otherwise fallback to defaults
 DOCX_OUTPUT_FOLDER = DynamicPathProxy(lambda: getattr(_local, "docx_output_folder", DOCX_OUTPUT_FOLDER_DEFAULT))
 PDF_OUTPUT_FOLDER = DynamicPathProxy(lambda: getattr(_local, "pdf_output_folder", PDF_OUTPUT_FOLDER_DEFAULT))
 

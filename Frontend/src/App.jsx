@@ -4,19 +4,21 @@ import PizZip from 'pizzip';
 import Docxtemplater from 'docxtemplater';
 import confetti from 'canvas-confetti';
 import axios from "axios"
-import { 
-  FileText, 
-  FileSpreadsheet, 
-  Check, 
-  AlertCircle, 
-  UploadCloud, 
-  Trash2, 
-  Download, 
-  Sparkles, 
-  CheckCircle2, 
+import env from ".env"
+import {
+  FileText,
+  FileSpreadsheet,
+  Check,
+  AlertCircle,
+  UploadCloud,
+  Trash2,
+  Download,
+  Sparkles,
+  CheckCircle2,
   Loader2
 } from 'lucide-react';
 
+const BACKEND_API_URL = import.meta.env.BACKEND_API_LOCAL
 export default function App() {
   const [templateFile, setTemplateFile] = useState(null);
   const [dataFile, setDataFile] = useState(null);
@@ -37,7 +39,7 @@ export default function App() {
     try {
       const arrayBuffer = await file.arrayBuffer();
       const zip = new PizZip(arrayBuffer);
-      
+
       for (const filename of Object.keys(zip.files)) {
         if (filename.startsWith("word/") && filename.endsWith(".xml")) {
           const fileObj = zip.file(filename);
@@ -52,7 +54,7 @@ export default function App() {
       const doc = new Docxtemplater(zip, {
         delimiters: { start: "<<", end: ">>" },
       });
-      
+
       const placeholders = new Set();
       for (const filename of Object.keys(zip.files)) {
         if (filename.startsWith("word/") && filename.endsWith(".xml")) {
@@ -80,7 +82,7 @@ export default function App() {
           }
         }
       }
-      
+
       const tags = Array.from(placeholders);
       setTemplateTags(tags);
       return tags;
@@ -98,7 +100,7 @@ export default function App() {
       const workbook = XLSX.read(data, { type: 'array' });
       const worksheet = workbook.Sheets[workbook.SheetNames[0]];
       const rawRows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-      
+
       const headers = (rawRows[0] || []).map(val => String(val || '').trim()).filter(Boolean);
       const rows = XLSX.utils.sheet_to_json(worksheet, { defval: "" }).map(row => {
         const cleanRow = {};
@@ -124,32 +126,32 @@ export default function App() {
       alert("Only Word templates (.docx) are supported.");
       return;
     }
-     try {
-    setIsValidating(true);
+    try {
+      setIsValidating(true);
 
-    const buffer = await file.arrayBuffer();
+      const buffer = await file.arrayBuffer();
 
-    const stableFile = new File(
-      [buffer],
-      file.name,
-      {
-        type: file.type || 
-          "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-      }
-    );
+      const stableFile = new File(
+        [buffer],
+        file.name,
+        {
+          type: file.type ||
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        }
+      );
 
-    setTemplateFile(stableFile);
-    setGeneratedInvoices([]);
-    setDownloadZipUrl(null);
+      setTemplateFile(stableFile);
+      setGeneratedInvoices([]);
+      setDownloadZipUrl(null);
 
-    await parseTemplate(stableFile);
+      await parseTemplate(stableFile);
 
-  } catch (error) {
-    console.error("Error reading template:", error);
-    alert("Could not read the Word template.");
-  } finally {
-    setIsValidating(false);
-  }
+    } catch (error) {
+      console.error("Error reading template:", error);
+      alert("Could not read the Word template.");
+    } finally {
+      setIsValidating(false);
+    }
   };
 
   const handleDataChange = async (file) => {
@@ -158,64 +160,85 @@ export default function App() {
       alert("Only Excel spreadsheets (.xlsx) are supported.");
       return;
     }
-     try {
-    setIsValidating(true);
+    try {
+      setIsValidating(true);
 
-    const buffer = await file.arrayBuffer();
+      const buffer = await file.arrayBuffer();
 
-    const stableFile = new File(
-      [buffer],
-      file.name,
-      {
-        type: file.type ||
-          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-      }
-    );
+      const stableFile = new File(
+        [buffer],
+        file.name,
+        {
+          type: file.type ||
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        }
+      );
 
-    setDataFile(stableFile);
-    setGeneratedInvoices([]);
-    setDownloadZipUrl(null);
+      setDataFile(stableFile);
+      setGeneratedInvoices([]);
+      setDownloadZipUrl(null);
 
-    await parseDataSheet(stableFile);
+      await parseDataSheet(stableFile);
 
-  } catch (error) {
-    console.error("Error reading spreadsheet:", error);
-    alert("Could not read the Excel file.");
-  } finally {
-    setIsValidating(false);
-  }
+    } catch (error) {
+      console.error("Error reading spreadsheet:", error);
+      alert("Could not read the Excel file.");
+    } finally {
+      setIsValidating(false);
+    }
   };
 
-  const matchedTags = templateTags.filter(tag => 
+  const matchedTags = templateTags.filter(tag =>
     sheetData.headers.some(header => header.toLowerCase() === tag.toLowerCase())
   );
-  const missingTags = templateTags.filter(tag => 
+  const missingTags = templateTags.filter(tag =>
     !sheetData.headers.some(header => header.toLowerCase() === tag.toLowerCase())
   );
-  
+
   const isReadyToGenerate = templateFile && dataFile && templateTags.length > 0 && sheetData.rows.length > 0;
 
   const generateInvoices = async () => {
     if (!isReadyToGenerate) return;
     setIsGenerating(true);
-    
+
     try {
       const formData = new FormData();
       formData.append("template", templateFile);
       formData.append("data", dataFile);
 
-      const response = await axios.post("http://127.0.0.1:8000/api/generate",
-        formData,
-        {
-          responseType : "blob",
-        }
-      );
+      const initiateResponse = await axios.post(`${BACKEND_API_URL}/api/generate`, formData);
+      const { task_id } = initiateResponse.data;
 
-      const zipBlob = response.data;
-     
+      let isCompleted = false;
+      let attempts = 0;
+      const maxAttempts = 120;
+      while (!isCompleted && attempts < maxAttempts) {
+        attempts++;
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+        
+        const statusResponse = await axios.get(`${BACKEND_API_URL}/api/status/${task_id}`);
+        const { status, error } = statusResponse.data;
+        
+        if (status === "completed") {
+          isCompleted = true;
+        } else if (status === "failed") {
+          throw new Error(error || "Processing failed on server.");
+        }
+      }
+
+      if (!isCompleted) {
+        throw new Error("Generation timed out on server.");
+      }
+
+      const downloadResponse = await axios.get(`${BACKEND_API_URL}/api/download/${task_id}`, {
+        responseType: "blob",
+      });
+
+      const zipBlob = downloadResponse.data;
+
       const zipUrl = URL.createObjectURL(zipBlob);
       const zipName = `FastInvoices_PDFs_${new Date().toISOString().slice(0, 10)}.zip`;
-      
+
       setZipFileName(zipName);
       setDownloadZipUrl(zipUrl);
 
@@ -305,7 +328,7 @@ export default function App() {
                     <div className="excel-cell header">A</div>
                     <div className="excel-cell header">B</div>
                     <div className="excel-cell header">C</div>
-                    
+
                     <div className="excel-cell">Customer_Name</div>
                     <div className="excel-cell">Invoice_Date</div>
                     <div className="excel-cell">Amount</div>
@@ -317,9 +340,9 @@ export default function App() {
                   <button className="excel-upload-btn">
                     <UploadCloud size={8} /> Upload
                   </button>
-                  <img 
-                    src="https://img.icons8.com/color/48/pointer.png" 
-                    alt="cursor" 
+                  <img
+                    src="https://img.icons8.com/color/48/pointer.png"
+                    alt="cursor"
                     className="click-hand"
                   />
                 </div>
@@ -356,7 +379,7 @@ export default function App() {
         <section>
           <h2 className="section-title">Invoice Workspace</h2>
           <div className="workspace-grid">
-            <div 
+            <div
               className={`dropzone-container docx-accent ${templateDragActive ? 'drag-active' : ''} ${templateFile ? 'has-file' : ''}`}
               onDragOver={(e) => { e.preventDefault(); setTemplateDragActive(true); }}
               onDragLeave={() => setTemplateDragActive(false)}
@@ -369,14 +392,14 @@ export default function App() {
               }}
               onClick={() => { if (!templateFile) templateInputRef.current.click(); }}
             >
-              <input 
-                type="file" 
-                ref={templateInputRef} 
-                style={{ display: 'none' }} 
-                accept=".docx" 
-                onChange={(e) => handleTemplateChange(e.target.files[0])} 
+              <input
+                type="file"
+                ref={templateInputRef}
+                style={{ display: 'none' }}
+                accept=".docx"
+                onChange={(e) => handleTemplateChange(e.target.files[0])}
               />
-              
+
               {!templateFile ? (
                 <>
                   <div className="icon-circle">
@@ -395,14 +418,14 @@ export default function App() {
                         <span className="file-size">{(templateFile.size / 1024).toFixed(1)} KB</span>
                       </div>
                     </div>
-                    <button 
-                      className="remove-file-btn" 
+                    <button
+                      className="remove-file-btn"
                       onClick={(e) => { e.stopPropagation(); removeTemplateFile(); }}
                     >
                       <Trash2 size={16} />
                     </button>
                   </div>
-                  
+
                   {templateTags.length > 0 ? (
                     <>
                       <div className="parsed-meta-badge">
@@ -413,8 +436,8 @@ export default function App() {
                         {templateTags.map((tag, idx) => {
                           const isMatched = sheetData.headers.some(h => h.toLowerCase() === tag.toLowerCase());
                           return (
-                            <span 
-                              key={idx} 
+                            <span
+                              key={idx}
                               className={`tag-bubble ${dataFile ? (isMatched ? 'matched' : 'mismatched') : ''}`}
                             >
                               &lt;&lt;{tag}&gt;&gt;
@@ -433,7 +456,7 @@ export default function App() {
               )}
             </div>
 
-            <div 
+            <div
               className={`dropzone-container xlsx-accent ${dataDragActive ? 'drag-active' : ''} ${dataFile ? 'has-file' : ''}`}
               onDragOver={(e) => { e.preventDefault(); setDataDragActive(true); }}
               onDragLeave={() => setDataDragActive(false)}
@@ -446,14 +469,14 @@ export default function App() {
               }}
               onClick={() => { if (!dataFile) dataInputRef.current.click(); }}
             >
-              <input 
-                type="file" 
-                ref={dataInputRef} 
-                style={{ display: 'none' }} 
-                accept=".xlsx" 
-                onChange={(e) => handleDataChange(e.target.files[0])} 
+              <input
+                type="file"
+                ref={dataInputRef}
+                style={{ display: 'none' }}
+                accept=".xlsx"
+                onChange={(e) => handleDataChange(e.target.files[0])}
               />
-              
+
               {!dataFile ? (
                 <>
                   <div className="icon-circle">
@@ -472,8 +495,8 @@ export default function App() {
                         <span className="file-size">{(dataFile.size / 1024).toFixed(1)} KB</span>
                       </div>
                     </div>
-                    <button 
-                      className="remove-file-btn" 
+                    <button
+                      className="remove-file-btn"
                       onClick={(e) => { e.stopPropagation(); removeDataFile(); }}
                     >
                       <Trash2 size={16} />
@@ -490,8 +513,8 @@ export default function App() {
                         {sheetData.headers.map((header, idx) => {
                           const isUsed = templateTags.some(t => t.toLowerCase() === header.toLowerCase());
                           return (
-                            <span 
-                              key={idx} 
+                            <span
+                              key={idx}
                               className={`tag-bubble ${templateFile ? (isUsed ? 'matched' : '') : ''}`}
                             >
                               {header}
@@ -561,7 +584,7 @@ export default function App() {
             </div>
           </div>
 
-          <button 
+          <button
             className="generate-btn"
             disabled={!isReadyToGenerate || isGenerating}
             onClick={generateInvoices}
@@ -582,8 +605,8 @@ export default function App() {
             <div className="result-header">
               <h3 className="result-title">Generated Invoices ({generatedInvoices.length})</h3>
               {downloadZipUrl && (
-                <a 
-                  href={downloadZipUrl} 
+                <a
+                  href={downloadZipUrl}
                   download={zipFileName}
                   className="download-pill-btn"
                   style={{ textDecoration: 'none', background: '#00E676', borderColor: '#00C853' }}
@@ -600,9 +623,9 @@ export default function App() {
                     <span className="invoice-item-name" title={inv.name}>{inv.name}</span>
                   </div>
                   {inv.url && (
-                    <a 
-                      href={inv.url} 
-                      download={inv.name} 
+                    <a
+                      href={inv.url}
+                      download={inv.name}
                       className="invoice-download-btn"
                       title="Download individual file"
                     >
