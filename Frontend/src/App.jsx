@@ -4,7 +4,6 @@ import PizZip from 'pizzip';
 import Docxtemplater from 'docxtemplater';
 import confetti from 'canvas-confetti';
 import axios from "axios"
-import env from ".env"
 import {
   FileText,
   FileSpreadsheet,
@@ -215,10 +214,10 @@ export default function App() {
       while (!isCompleted && attempts < maxAttempts) {
         attempts++;
         await new Promise((resolve) => setTimeout(resolve, 1500));
-        
+
         const statusResponse = await axios.get(`${BACKEND_API_URL}/api/status/${task_id}`);
         const { status, error } = statusResponse.data;
-        
+
         if (status === "completed") {
           isCompleted = true;
         } else if (status === "failed") {
