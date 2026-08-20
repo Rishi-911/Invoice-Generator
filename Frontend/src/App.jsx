@@ -17,7 +17,7 @@ import {
   Loader2
 } from 'lucide-react';
 
-const BACKEND_API_URL = import.meta.env.BACKEND_API_LOCAL
+const BACKEND_API_URL = import.meta.env.VITE_BACKEND_API_LOCAL || "http://localhost:8000"
 export default function App() {
   const [templateFile, setTemplateFile] = useState(null);
   const [dataFile, setDataFile] = useState(null);
