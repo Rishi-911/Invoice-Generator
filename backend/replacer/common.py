@@ -1,5 +1,6 @@
-from win32com.client import constants
 from formatter import format_value
+
+WD_REPLACE_ALL = 2
 
 def replace_common(find, invoice_data):
     try:
@@ -23,6 +24,7 @@ def replace_common(find, invoice_data):
             find.Execute(
                 FindText = placeholder,
                 ReplaceWith = format_value(key,value),
-                Replace = constants.wdReplaceAll
+                Replace = WD_REPLACE_ALL
             )
+
  

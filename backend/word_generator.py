@@ -1,9 +1,10 @@
-import win32com
+import win32com.client
 from excel_reader import read_file
 import pythoncom
 import logging
+import os
+import shutil
 from config import TEMPLATES_FOLDER, DOCX_OUTPUT_FOLDER, PDF_OUTPUT_FOLDER
-from win32com.client import constants
 from replacer.content_replace import replace_content
 from replacer.shape_replacer import replace_shapes
 from replacer.header_replacer import replace_header
@@ -11,13 +12,28 @@ from replacer.footer_replacer import replace_footer
 
 logger = logging.getLogger("invoice_generator")
 
+WD_FORMAT_PDF = 17
+
+def get_word_app():
+    try:
+        return win32com.client.Dispatch("Word.Application")
+    except Exception as e:
+        logger.warning(f"Initial Word COM Dispatch failed: {e}. Clearing gen_py cache...")
+        try:
+            gen_py_path = getattr(win32com, "__gen_path__", None)
+            if gen_py_path and os.path.exists(gen_py_path):
+                shutil.rmtree(gen_py_path, ignore_errors=True)
+        except Exception:
+            pass
+        return win32com.client.Dispatch("Word.Application")
+
 def replace_placeholders(template_path, data_path):
     pythoncom.CoInitialize()
     try:
         df = read_file(data_path)
         logger.info(f"Excel read completed. Total rows: {len(df)}")
 
-        word_main = win32com.client.gencache.EnsureDispatch("Word.Application")
+        word_main = get_word_app()
         word_main.Visible = False
         
         word_main.ScreenUpdating = False
@@ -47,7 +63,7 @@ def replace_placeholders(template_path, data_path):
                     output_pdf = PDF_OUTPUT_FOLDER / f"{row_name}.pdf"
                     doc.SaveAs(
                         str(output_pdf.resolve()),
-                        FileFormat=constants.wdFormatPDF
+                        FileFormat=WD_FORMAT_PDF
                     )
                     
                     pdf_files.append(output_pdf)
