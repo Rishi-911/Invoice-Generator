@@ -5,10 +5,6 @@ from pathlib import Path
 _local = threading.local()
 
 class DynamicPathProxy:
-    """
-    A path proxy that dynamically evaluates the actual path object on demand.
-    This allows thread-safe overriding of output folders for multi-user isolation.
-    """
     def __init__(self, get_path_fn):
         self._get_path_fn = get_path_fn
 
@@ -37,4 +33,3 @@ PDF_OUTPUT_FOLDER_DEFAULT = OUTPUT_FOLDER / "pdf"
 
 DOCX_OUTPUT_FOLDER = DynamicPathProxy(lambda: getattr(_local, "docx_output_folder", DOCX_OUTPUT_FOLDER_DEFAULT))
 PDF_OUTPUT_FOLDER = DynamicPathProxy(lambda: getattr(_local, "pdf_output_folder", PDF_OUTPUT_FOLDER_DEFAULT))
-

@@ -1,7 +1,6 @@
 import React, { useState, useRef } from 'react';
 import * as XLSX from 'xlsx';
 import PizZip from 'pizzip';
-import Docxtemplater from 'docxtemplater';
 import confetti from 'canvas-confetti';
 import axios from "axios"
 import {
@@ -17,7 +16,17 @@ import {
   Loader2
 } from 'lucide-react';
 
-const BACKEND_API_URL = import.meta.env.VITE_BACKEND_API_LOCAL || "http://localhost:8000"
+const getBackendUrl = () => {
+  const url =
+    import.meta.env.VITE_BACKEND_API_URL ||
+    import.meta.env.VITE_BACKEND_API_LOCAL ||
+    import.meta.env.VITE_API_URL ||
+    "http://localhost:8000";
+  return url.replace(/\/+$/, "");
+};
+
+const BACKEND_API_URL = getBackendUrl();
+
 export default function App() {
   const [templateFile, setTemplateFile] = useState(null);
   const [dataFile, setDataFile] = useState(null);
@@ -49,10 +58,6 @@ export default function App() {
           }
         }
       }
-
-      const doc = new Docxtemplater(zip, {
-        delimiters: { start: "<<", end: ">>" },
-      });
 
       const placeholders = new Set();
       for (const filename of Object.keys(zip.files)) {

@@ -43,7 +43,6 @@ body {
   min-height: 100vh;
 }
 
-/* Header Banner */
 .header-banner {
   background-color: #ffffff;
   width: 100%;
@@ -65,7 +64,6 @@ body {
   margin: 0;
 }
 
-/* App Main Layout */
 .app-container {
   max-width: 1200px;
   width: 100%;
@@ -76,7 +74,6 @@ body {
   gap: 2.5rem;
 }
 
-/* Section Titles */
 .section-title {
   font-size: 1.25rem;
   font-weight: 800;
@@ -88,7 +85,6 @@ body {
   position: relative;
 }
 
-/* HOW IT WORKS Section */
 .how-it-works-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
@@ -122,9 +118,8 @@ body {
   margin-bottom: 0.5rem;
 }
 
-/* Specific Card Themes based on User Request and Screenshot */
 .card-docx {
-  background-color: var(--primary-light); /* E3F2FD */
+  background-color: var(--primary-light);
   color: var(--text-dark);
 }
 
@@ -133,7 +128,7 @@ body {
 }
 
 .card-xlsx {
-  background-color: #FFF3E0; /* Light orange */
+  background-color: #FFF3E0;
   color: var(--text-dark);
 }
 
@@ -142,7 +137,7 @@ body {
 }
 
 .card-generate {
-  background-color: #FBE9E7; /* Light red/coral */
+  background-color: #FBE9E7;
   color: var(--text-dark);
 }
 
@@ -150,7 +145,6 @@ body {
   color: #D84315;
 }
 
-/* Visual Mockups Inside Cards */
 .mockup-container {
   flex-grow: 1;
   display: flex;
@@ -164,7 +158,6 @@ body {
   border: 1px solid rgba(0,0,0,0.03);
 }
 
-/* Card 1 Visual Mockup (Word template with tags & Callout) */
 .word-mockup {
   display: flex;
   gap: 12px;
@@ -235,7 +228,6 @@ body {
   font-weight: bold;
 }
 
-/* Card 2 Visual Mockup (Excel window, rows & pointer) */
 .excel-mockup {
   background: white;
   border: 1.5px solid #2E7D32;
@@ -315,7 +307,6 @@ body {
   50% { transform: translateY(2px) scale(0.95); }
 }
 
-/* Card 3 Visual Mockup (Files, Lightning & Download) */
 .generate-mockup {
   display: flex;
   align-items: center;
@@ -395,7 +386,6 @@ body {
   transform: scale(1.05);
 }
 
-/* Bullet list instructions below HOW IT WORKS */
 .instructions-list {
   list-style: none;
   display: flex;
@@ -421,7 +411,6 @@ body {
   margin-left: -1em;
 }
 
-/* WORKSPACE SECTION */
 .workspace-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
@@ -526,7 +515,6 @@ body {
   font-weight: 500;
 }
 
-/* File Upload Details */
 .file-details-card {
   width: 100%;
   display: flex;
@@ -592,7 +580,6 @@ body {
   transform: scale(1.1);
 }
 
-/* Parsed details tags and rows */
 .parsed-meta-badge {
   display: inline-flex;
   align-items: center;
@@ -658,7 +645,6 @@ body {
   border-color: #FFCDD2;
 }
 
-/* BOTTOM VALIDATION & ACTION BAR */
 .action-section-container {
   display: grid;
   grid-template-columns: 1fr auto;
@@ -672,7 +658,6 @@ body {
   }
 }
 
-/* Left Validation status card */
 .validation-card {
   background: var(--bg-card);
   border-radius: var(--border-radius);
@@ -732,7 +717,6 @@ body {
   font-weight: 500;
 }
 
-/* Right big generate button */
 .generate-btn {
   background-color: var(--success-color);
   color: #0F172A;
@@ -778,9 +762,6 @@ body {
   transform: scale(1.2) rotate(10deg);
 }
 
-/* Confetti trigger and animation frames if custom confetti logic is needed */
-
-/* Generated Invoices Table / Drawer for preview */
 .result-section {
   background: var(--bg-card);
   border-radius: var(--border-radius);

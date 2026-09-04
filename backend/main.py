@@ -36,15 +36,22 @@ def cleanup_task(task_id: str, req_dir: Path):
     if task_id in tasks:
         del tasks[task_id]
 
+allowed_origins = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:3000",
+    "https://invoice-generator-psi-ashy.vercel.app",
+]
+env_origins = os.getenv("ALLOWED_ORIGINS", "")
+if env_origins:
+    allowed_origins.extend([o.strip() for o in env_origins.split(",") if o.strip()])
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "https://invoice-generator-psi-ashy.vercel.app"
-    ],
+    allow_origins=allowed_origins,
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
-    allow_methods=["GET", "POST"],
+    allow_methods=["*"],
     allow_headers=["*"]
 )
 
@@ -60,20 +67,20 @@ def generate_invoices_background(
         config._local.docx_output_folder = docx_out
         config._local.pdf_output_folder = pdf_out
 
-        pdf_files, docx_files = replace_placeholders(template_path, data_path)
+        pdf_files = replace_placeholders(template_path, data_path)
 
         zip_path = req_dir / "invoices.zip"
 
         with zipfile.ZipFile(
-                zip_path,
-                "w",
-                zipfile.ZIP_DEFLATED
+            zip_path,
+            "w",
+            zipfile.ZIP_DEFLATED
         ) as zip_file:
-                for pdf_path in pdf_files:
-                        zip_file.write(
-                                pdf_path,
-                                arcname=pdf_path.name
-                        )
+            for pdf_path in pdf_files:
+                zip_file.write(
+                    pdf_path,
+                    arcname=pdf_path.name
+                )
 
         tasks[task_id] = {
             "status": "completed",
@@ -94,57 +101,57 @@ def generate_invoices_background(
 
 @app.post("/api/generate")
 def generate_invoices(
-        background_tasks: BackgroundTasks,
-        template: UploadFile = File(...),
-        data: UploadFile = File(...)
-):      
-        logger.info("Received request to generate invoices.")
-        
-        request_id = uuid.uuid4().hex
+    background_tasks: BackgroundTasks,
+    template: UploadFile = File(...),
+    data: UploadFile = File(...)
+):
+    logger.info("Received request to generate invoices.")
+    
+    request_id = uuid.uuid4().hex
 
-        req_dir = config.BASE_DIR / "temporary" / request_id
-        docx_out = req_dir / "output" / "docx"
-        pdf_out = req_dir / "output" / "pdf"
+    req_dir = config.BASE_DIR / "temporary" / request_id
+    docx_out = req_dir / "output" / "docx"
+    pdf_out = req_dir / "output" / "pdf"
 
-        req_dir.mkdir(parents=True, exist_ok=True)
-        docx_out.mkdir(parents=True, exist_ok=True)
-        pdf_out.mkdir(parents=True, exist_ok=True)
+    req_dir.mkdir(parents=True, exist_ok=True)
+    docx_out.mkdir(parents=True, exist_ok=True)
+    pdf_out.mkdir(parents=True, exist_ok=True)
 
-        template_ext = Path(template.filename).suffix if template.filename else ".docx"
-        data_ext = Path(data.filename).suffix if data.filename else ".xlsx"
+    template_ext = Path(template.filename).suffix if template.filename else ".docx"
+    data_ext = Path(data.filename).suffix if data.filename else ".xlsx"
 
-        template_path = req_dir / f"template{template_ext}"
-        data_path = req_dir / f"data{data_ext}"
+    template_path = req_dir / f"template{template_ext}"
+    data_path = req_dir / f"data{data_ext}"
 
-        with open(template_path, "wb") as file:
-                shutil.copyfileobj(template.file, file)
+    with open(template_path, "wb") as file:
+        shutil.copyfileobj(template.file, file)
 
-        with open(data_path, "wb") as file:
-                shutil.copyfileobj(data.file, file)
+    with open(data_path, "wb") as file:
+        shutil.copyfileobj(data.file, file)
 
-        logger.info("Successfully copied uploaded files to disk. Starting background worker.")
+    logger.info("Successfully copied uploaded files to disk. Starting background worker.")
 
-        tasks[request_id] = {
-            "status": "processing",
-            "zip_path": None,
-            "req_dir": req_dir,
-            "error": None
-        }
+    tasks[request_id] = {
+        "status": "processing",
+        "zip_path": None,
+        "req_dir": req_dir,
+        "error": None
+    }
 
-        background_tasks.add_task(
-            generate_invoices_background,
-            request_id,
-            template_path,
-            data_path,
-            req_dir,
-            docx_out,
-            pdf_out
-        )
+    background_tasks.add_task(
+        generate_invoices_background,
+        request_id,
+        template_path,
+        data_path,
+        req_dir,
+        docx_out,
+        pdf_out
+    )
 
-        return {
-            "task_id": request_id,
-            "status": "processing"
-        }
+    return {
+        "task_id": request_id,
+        "status": "processing"
+    }
 
 @app.get("/api/status/{task_id}")
 def get_task_status(task_id: str):
@@ -180,4 +187,3 @@ def download_invoices(task_id: str):
             req_dir
         )
     )
-
